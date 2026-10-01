@@ -19,6 +19,10 @@ run cmd name="dev":
 build name="dev":
     make -C {{K}} O={{B}}/{{name}} LLVM=1 -j$(nproc) bzImage modules
 
+[group('build')]
+compdb name="dev":
+    make -C {{K}} O={{B}}/{{name}} LLVM=1 compile_commands.json
+
 [group('config')]
 config name="dev":
     mkdir -p {{B}}/{{name}}
