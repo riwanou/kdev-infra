@@ -1,2 +1,8 @@
 CompileFlags:
   CompilationDatabase: build/dev
+---
+If:
+  PathMatch: linux/tools/testing/selftests/.*
+CompileFlags:
+  CompilationDatabase: None
+  Add: [-I.., -D_GNU_SOURCE]
