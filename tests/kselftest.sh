@@ -1,5 +1,10 @@
 #!/bin/bash
-# usage: tests/kselftest.sh on|off [category ...]   e.g. tests/kselftest.sh on mremap cow
+#
+# just build
+# just kselftest
+# just run "./tests/kselftest.sh off numa_replication"
+# just run "./tests/kselftest.sh on mmap"
+# 
 [ "$1" = on ] && echo 1 > /proc/self/numa_repl
 shift
 cd build/dev/kselftest

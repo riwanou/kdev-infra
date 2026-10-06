@@ -21,19 +21,18 @@ run cmd="" name="dev" gdb="":
 [group('check')]
 ci:
     @echo "{{BOLD}}== checkpatch{{NORMAL}}"
-    cd {{K}} && git diff HEAD | scripts/checkpatch.pl --no-tree -
-    cd {{K}} && scripts/checkpatch.pl --no-tree -f $(git ls-files --others --exclude-standard)
-    @echo "{{BOLD}}== vma userspace tests{{NORMAL}}"
+    cd {{K}} && { git diff numa-repl; git ls-files -z -o --exclude-standard | xargs -r0 -n1 git diff --no-index /dev/null; } | scripts/checkpatch.pl --no-tree --ignore FILE_PATH_CHANGES -
+    # @echo "{{BOLD}}== vma userspace tests{{NORMAL}}"
     make -C {{K}}/tools/testing/vma && {{K}}/tools/testing/vma/vma
-    @echo "{{BOLD}}== build without replication{{NORMAL}}"
+    # @echo "{{BOLD}}== build without replication{{NORMAL}}"
     just build norepl
-    @echo "{{BOLD}}== build and selftests{{NORMAL}}"
+    # @echo "{{BOLD}}== build and selftests{{NORMAL}}"
     just build
     just kselftest
     just run "./tests/kselftest.sh off numa_replication"
-    @echo "{{BOLD}}== stress{{NORMAL}}"
+    # @echo "{{BOLD}}== stress{{NORMAL}}"
     just run "bash -c 'echo 1 > /proc/self/numa_repl; stress-ng --fork 0 --vm 0 --vm-bytes 32M --verify --switch 0 -t 5s'"
-    @echo "{{GREEN}}{{BOLD}}ci: all checks passed{{NORMAL}}"
+    # @echo "{{GREEN}}{{BOLD}}ci: all checks passed{{NORMAL}}"
 
 [group('build')]
 build name="dev":
@@ -49,6 +48,19 @@ kselftest name="dev":
 [group('debug')]
 gdb name="dev":
     gdb -x gdbinit {{B}}/{{name}}/vmlinux
+
+[group('debug')]
+rip line name="dev":
+    #!/usr/bin/env bash
+    set -e
+    vmlinux={{B}}/{{name}}/vmlinux
+    read sym off < <(sed -E 's/^(.*[: ])?([A-Za-z0-9_.]+)\+(0x[0-9a-f]+).*/\2 \3/' <<< "$1")
+    base=$(llvm-nm "$vmlinux" | awk -v s="$sym" '$3==s {print $1; exit}')
+    llvm-addr2line -i -f -p -e "$vmlinux" $(printf '0x%x' $((0x$base + off)))
+
+[group('debug')]
+oops name="dev":
+    LLVM=1 {{K}}/scripts/decode_stacktrace.sh {{B}}/{{name}}/vmlinux
 
 [group('build')]
 compdb name="dev":
