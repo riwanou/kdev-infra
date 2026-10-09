@@ -7,8 +7,12 @@
 # just run "build/dev/kselftest/mm/numa_replication_mm 'file: migrate'"
 # 
 
-mkdir -p /tmp/ext4 && truncate -s 1G /tmp/ext4.img && mkfs.ext4 -qF /tmp/ext4.img && mount -o loop /tmp/ext4.img /tmp/ext4 || exit 1
+mkdir -p /tmp/ram && mount -t ramfs ramfs /tmp/ram
+mkdir -p /tmp/ext4 && truncate -s 1G /tmp/ram/ext4.img && mkfs.ext4 -qF /tmp/ram/ext4.img && mount -o loop /tmp/ram/ext4.img /tmp/ext4 || exit 1
 export REPL_TEST_DIR=/tmp/ext4
+
+dd if=/dev/zero of=/tmp/ext4/swap bs=1M count=256 status=none && chmod 600 /tmp/ext4/swap && mkswap -q /tmp/ext4/swap && swapon /tmp/ext4/swap
+trap 'swapoff /tmp/ext4/swap' EXIT
 
 [ "$1" = on ] && echo 1 > /proc/self/numa_repl
 shift

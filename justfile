@@ -5,16 +5,16 @@ K := justfile_directory() / "linux"
 B := justfile_directory() / "build"
 
 MEM := "8G"
-NODE_MEM := "2G"
+MB := if MEM =~ "M$" { trim_end_match(MEM, "M") } else { trim_end_match(MEM, "G") + " * 1024" }
 
 set positional-arguments
 
 [group('run')]
 run cmd="" name="dev" gdb="":
-    vng -r {{B}}/{{name}} --user root -m {{MEM}} --verbose \
-        --numa {{NODE_MEM}},cpus=0-5 --numa {{NODE_MEM}},cpus=6-11 \
-        --numa {{NODE_MEM}},cpus=12-17 --numa {{NODE_MEM}},cpus=18-23 \
-        --append "no5lvl nokaslr norandmaps panic_on_warn=1 i8042.noaux i8042.nokbd libata.force=disable loglevel=5" \
+    vng -r {{B}}/{{name}} --user root -m $(({{MB}}))M --verbose \
+        --numa $(({{MB}} / 4))M,cpus=0-5 --numa $(({{MB}} / 4))M,cpus=6-11 \
+        --numa $(({{MB}} / 4))M,cpus=12-17 --numa $(({{MB}} / 4))M,cpus=18-23 \
+        --append "no5lvl nokaslr norandmaps panic_on_warn=1 hung_task_timeout_secs=10 hung_task_panic=1 softlockup_panic=1 i8042.noaux i8042.nokbd libata.force=disable loglevel=5" \
         {{ if gdb != "" { "--qemu-opts='-s -S'" } else { "" } }} \
         {{ if cmd != "" { "--exec " + quote(cmd) } else { "" } }}
 
@@ -32,6 +32,8 @@ ci:
     just run "./tests/kselftest.sh off numa_replication"
     # @echo "{{BOLD}}== stress{{NORMAL}}"
     just run "bash -c 'echo 1 > /proc/self/numa_repl; stress-ng --fork 0 --vm 0 --vm-bytes 32M --verify --switch 0 -t 5s'"
+    # @echo "{{BOLD}}== ann under pressure{{NORMAL}}"
+    just MEM=16G run "TIME=20 WATCH=1 PRESSURE='cg:4G:8-12' PLACEMENT=dynamic ./tests/ann.sh"
     # @echo "{{GREEN}}{{BOLD}}ci: all checks passed{{NORMAL}}"
 
 [group('build')]
