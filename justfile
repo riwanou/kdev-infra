@@ -85,7 +85,7 @@ install name="repl":
     [ -f {{B}}/{{name}}/.config ] || just K=$k BASE=/boot/config-$(uname -r) config {{name}}
     just K=$k build {{name}}
     rm -f {{B}}/{{name}}/vmlinuz-* {{B}}/{{name}}/initrd.img-*
-    make -C $k O={{B}}/{{name}} LLVM=1 modules_install
+    make -C $k O={{B}}/{{name}} LLVM=1 -j$(nproc) modules_install
     make -C $k O={{B}}/{{name}} LLVM=1 INSTALL_PATH={{B}}/{{name}} install
     v=$(make -s -C $k O={{B}}/{{name}} kernelrelease)
     cp {{B}}/{{name}}/.config /boot/config-$v
@@ -93,9 +93,10 @@ install name="repl":
 
 [group('install')]
 kexec name="repl":
-    kexec -l {{B}}/{{name}}/vmlinuz-* --initrd={{B}}/{{name}}/initrd.img-* \
+    kexec -l {{B}}/{{name}}/vmlinuz-* --initrd {{B}}/{{name}}/initrd.img-* \
         --command-line="$(sed 's/ no5lvl//; s/ panic=10//' /proc/cmdline) no5lvl panic=10"
     kexec -e
+
 
 [group('config')]
 menuconfig name="dev":
